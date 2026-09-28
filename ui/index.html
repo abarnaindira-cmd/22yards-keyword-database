@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Keyword Database - Amazon Product Keyword Collection</title>
+
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- SheetJS (XLSX) for client-side Excel parsing and exports -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+    <!-- UI Custom Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Header / Navbar -->
+    <header class="app-header">
+        <div class="header-container">
+            <div class="brand-group">
+                <div class="brand-logo">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                        <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                    </svg>
+                </div>
+                <div class="brand-text">
+                    <h1 class="app-title">Keyword Database</h1>
+                    <p class="app-subtitle">Amazon Product Keyword Collection Platform</p>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <div class="system-status" id="systemStatus">
+                    <span class="status-indicator"></span>
+                    <span class="status-text">MySQL Database Connected</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="main-container">
+
+        <!-- 1. EXCEL UPLOAD SECTION -->
+        <section class="card upload-card" id="uploadCardSection">
+            <div class="card-header">
+                <div>
+                    <h2 class="card-title">Upload Product Spreadsheet</h2>
+                    <p class="card-description">Upload an Excel spreadsheet (.xlsx, .xls) containing product ASINs and titles to retrieve keyword metrics.</p>
+                </div>
+                <span class="badge badge-info">Maximum Limit: 100 Products</span>
+            </div>
+
+            <div class="upload-dropzone" id="dropzone">
+                <input type="file" id="excelFileInput" accept=".xlsx,.xls" hidden>
+                <div class="dropzone-content" id="dropzoneContent">
+                    <div class="upload-icon-wrapper">
+                        <svg class="upload-icon" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                    </div>
+                    <div class="upload-instructions">
+                        <p class="upload-primary-text">Drag & drop your Excel file here, or <span class="upload-browse-btn" onclick="document.getElementById('excelFileInput').click()">Choose Excel File</span></p>
+                        <p class="upload-secondary-text">Supported formats: .xlsx, .xls (Maximum 100 products per upload)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Validation & File Details Panel (Hidden until file selected) -->
+            <div class="file-details-panel hidden" id="fileDetailsPanel">
+                <div class="file-info-bar">
+                    <div class="file-meta">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                        </svg>
+                        <span class="file-name" id="fileName">selected_file.xlsx</span>
+                        <span class="file-size-badge" id="fileSize">0 KB</span>
+                    </div>
+
+                    <div class="product-count-badge" id="productCountBadge">
+                        <span id="detectedProductCount">0</span> Products Detected
+                    </div>
+                </div>
+
+                <!-- Validation Alert Message Box -->
+                <div class="validation-alert hidden" id="validationAlert">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    <span id="validationAlertText">Validation Message</span>
+                </div>
+            </div>
+
+            <div class="upload-actions">
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('excelFileInput').click()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    Choose Excel File
+                </button>
+                <button type="button" class="btn btn-primary" id="startCollectionBtn" onclick="startKeywordCollection()" disabled>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    </svg>
+                    Start Keyword Collection
+                </button>
+            </div>
+        </section>
+
+        <!-- 2. COLLECTION PROGRESS SECTION (Hidden initially, shown when processing) -->
+        <section class="card progress-card hidden" id="progressCardSection">
+            <div class="progress-header">
+                <div>
+                    <h3 class="progress-title">Keyword Collection Progress</h3>
+                    <p class="progress-subtitle" id="progressStatusText">Processing uploaded products...</p>
+                </div>
+                <div class="progress-meta">
+                    <span class="badge badge-processing" id="progressStatusBadge">Processing</span>
+                    <span class="progress-percentage-label" id="progressPercentageText">0%</span>
+                </div>
+            </div>
+
+            <div class="progress-bar-track">
+                <div class="progress-bar-fill" id="progressBarFill" style="width: 0%;"></div>
+            </div>
+        </section>
+
+        <!-- 3. DASHBOARD SUMMARY CARDS (Hidden initially, shown after Excel matching) -->
+        <section class="summary-cards-grid hidden" id="summaryCardsSection">
+            <div class="card summary-card card-total">
+                <div class="summary-card-body">
+                    <div class="summary-icon icon-total">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                        </svg>
+                    </div>
+                    <div class="summary-details">
+                        <span class="summary-label">Excel Products Matched</span>
+                        <h3 class="summary-value" id="cardTotalProducts">0</h3>
+                    </div>
+                </div>
+                <div class="summary-card-footer">
+                    <span class="summary-subtext" id="cardMatchedSubtext">Matched with MySQL Database</span>
+                </div>
+            </div>
+
+            <div class="card summary-card card-completed">
+                <div class="summary-card-body">
+                    <div class="summary-icon icon-completed">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                        </svg>
+                    </div>
+                    <div class="summary-details">
+                        <span class="summary-label">Products With Data</span>
+                        <h3 class="summary-value" id="cardProductsWithKeywords">0</h3>
+                    </div>
+                </div>
+                <div class="summary-card-footer">
+                    <span class="summary-subtext text-success" id="cardCompletionRate">100% MySQL Match</span>
+                </div>
+            </div>
+
+            <div class="card summary-card card-keywords">
+                <div class="summary-card-body">
+                    <div class="summary-icon icon-keywords">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                            <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                        </svg>
+                    </div>
+                    <div class="summary-details">
+                        <span class="summary-label">Total Keywords</span>
+                        <h3 class="summary-value" id="cardTotalKeywords">0</h3>
+                    </div>
+                </div>
+                <div class="summary-card-footer">
+                    <span class="summary-subtext" id="cardAvgKeywords">Avg 0 Keywords/Product</span>
+                </div>
+            </div>
+
+            <div class="card summary-card card-pending">
+                <div class="summary-card-body">
+                    <div class="summary-icon icon-pending">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                    </div>
+                    <div class="summary-details">
+                        <span class="summary-label">Unmatched Products</span>
+                        <h3 class="summary-value" id="cardProductsWithoutKeywords">0</h3>
+                    </div>
+                </div>
+                <div class="summary-card-footer">
+                    <span class="summary-subtext text-muted" id="cardUnmatchedSubtext">0 Products Not Found in DB</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. PRODUCT RESULT TABLE SECTION (Hidden initially, shown after Excel matching) -->
+        <section class="card table-card hidden" id="tableCardSection">
+            <!-- Toolbar: Search, Filter, Sort & Export -->
+            <div class="toolbar-header">
+                <div class="search-filter-group">
+                    <!-- Search Input -->
+                    <div class="search-input-wrapper">
+                        <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                        <input type="text" id="searchInput" class="search-input" placeholder="Search by ASIN or Product Name..." oninput="filterProducts()">
+                    </div>
+
+                    <!-- Match Status Filter -->
+                    <div class="select-wrapper">
+                        <select id="statusFilter" class="select-control" onchange="filterProducts()">
+                            <option value="all">All Items</option>
+                            <option value="matched">Matched Products</option>
+                            <option value="unmatched">Unmatched Products</option>
+                        </select>
+                    </div>
+
+                    <!-- Category Filter -->
+                    <div class="select-wrapper">
+                        <select id="categoryFilter" class="select-control" onchange="filterProducts()">
+                            <option value="all">All Categories</option>
+                        </select>
+                    </div>
+
+                    <!-- Sort Controls -->
+                    <div class="select-wrapper">
+                        <select id="sortControl" class="select-control" onchange="filterProducts()">
+                            <option value="id_asc">Sort: Product ID (Ascending)</option>
+                            <option value="kw_desc">Keywords: High to Low</option>
+                            <option value="comp_desc">Competitors: High to Low</option>
+                            <option value="name_asc">Product Name (A-Z)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Export Downloads Buttons -->
+                <div class="table-export-actions">
+                    <button type="button" class="btn btn-outline" onclick="downloadResults('csv')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                        </svg>
+                        Download CSV
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="downloadResults('excel')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        Download Excel
+                    </button>
+                </div>
+            </div>
+
+            <!-- Product Result Table -->
+            <div class="table-container">
+                <table class="data-table" id="productTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 60px;">#</th>
+                            <th style="width: 150px;">ASIN</th>
+                            <th>Product Name</th>
+                            <th style="width: 130px; text-align: center;">Keyword Count</th>
+                            <th style="width: 140px; text-align: center;">Competitors Count</th>
+                            <th style="width: 120px;">DB Match</th>
+                            <th style="width: 140px; text-align: center;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="productTableBody">
+                        <!-- Rendered dynamically by script.js -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Table Pagination & Counter -->
+            <div class="table-footer">
+                <div class="pagination-info" id="paginationInfo">
+                    Showing 0 of 0 matched products
+                </div>
+                <div class="pagination-controls">
+                    <label class="rows-per-page-label">Rows per page:
+                        <select id="pageSizeSelect" onchange="changePageSize(this.value)">
+                            <option value="100" selected>100</option>
+                            <option value="50">50</option>
+                            <option value="25">25</option>
+                            <option value="10">10</option>
+                        </select>
+                    </label>
+                    <div class="page-buttons" id="pageButtons">
+                        <!-- Pagination buttons generated by script.js -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. RECENT DOWNLOADS SECTION (Hidden initially) -->
+        <section class="card downloads-card hidden" id="downloadsCardSection">
+            <div class="card-header">
+                <div>
+                    <h3 class="card-title">Recent Downloads</h3>
+                    <p class="card-description">History of exported keyword spreadsheets and data files.</p>
+                </div>
+                <button type="button" class="btn btn-ghost btn-sm" onclick="clearDownloadHistory()">Clear History</button>
+            </div>
+
+            <div class="downloads-list" id="downloadsList">
+                <!-- Rendered dynamically by script.js -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modal: View Details & Competitors for Product -->
+    <div class="modal-backdrop hidden" id="keywordsModalBackdrop">
+        <div class="modal-content" role="dialog" aria-modal="true" style="max-width: 900px; width: 95%;">
+            <div class="modal-header">
+                <div>
+                    <div class="modal-subtitle-badge" id="modalAsinBadge">ASIN: -</div>
+                    <h2 class="modal-title" id="modalProductName">Product Details & Competitors</h2>
+                </div>
+                <button type="button" class="modal-close-btn" onclick="closeKeywordsModal()">&times;</button>
+            </div>
+
+            <div class="modal-body">
+                <!-- Modal Top Meta Bar -->
+                <div class="modal-meta-bar">
+                    <div class="meta-item">
+                        <span class="meta-label">Category:</span>
+                        <span class="meta-value" id="modalCategory">General</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Keywords:</span>
+                        <span class="meta-value badge badge-success" id="modalKeywordCount">0 Keywords</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Competitors:</span>
+                        <span class="meta-value badge badge-info" id="modalCompetitorCount">0 Competitors</span>
+                    </div>
+                </div>
+
+                <!-- Modal Tabs Nav -->
+                <div class="modal-tabs">
+                    <button type="button" class="tab-btn active" id="tabKeywordsBtn" onclick="switchModalTab('keywords')">Keywords</button>
+                    <button type="button" class="tab-btn" id="tabCompetitorsBtn" onclick="switchModalTab('competitors')">Competitor Products</button>
+                </div>
+
+                <!-- Tab 1: Keywords Content -->
+                <div id="tabKeywordsContent">
+                    <div class="modal-search-wrapper" style="margin-top: 12px;">
+                        <input type="text" id="modalKeywordSearch" class="search-input" placeholder="Search keywords in this product..." oninput="filterModalKeywords()">
+                    </div>
+                    <div class="modal-table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50px;">#</th>
+                                    <th>Keyword Phrase</th>
+                                    <th style="width: 180px;">Source</th>
+                                    <th style="width: 130px; text-align: right;">Relevance Score</th>
+                                </tr>
+                            </thead>
+                            <tbody id="modalKeywordsTableBody">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tab 2: Competitor Products Content -->
+                <div id="tabCompetitorsContent" class="hidden">
+                    <div class="modal-search-wrapper" style="margin-top: 12px;">
+                        <input type="text" id="modalCompetitorSearch" class="search-input" placeholder="Filter competitors by ASIN, Title, or Keyword..." oninput="filterModalCompetitors()">
+                    </div>
+                    <div class="modal-table-container">
+                        <table class="data-table" style="font-size: 13px;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50px;">Rank</th>
+                                    <th style="width: 110px;">Comp. ASIN</th>
+                                    <th style="width: 180px;">Title</th>
+                                    <th style="width: 80px;">Price</th>
+                                    <th style="width: 70px;">Rating</th>
+                                    <th style="width: 80px;">Reviews</th>
+                                    <th style="width: 90px;">Marketplace</th>
+                                    <th style="width: 220px;">Description</th>
+                                    <th>Bullet Points</th>
+                                </tr>
+                            </thead>
+                            <tbody id="modalCompetitorTableBody">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="copyModalKeywords()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                    Copy Keywords
+                </button>
+                <button type="button" class="btn btn-primary" onclick="closeKeywordsModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Script File -->
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+.venv
+venv/
+ENV/
+*.db
+*.sqlite3
+.pytest_cache/
+.vscode/
+.idea/
+logs/
+
+*.xlsx
