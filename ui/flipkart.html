@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flipkart Keyword Database</title>
+
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- SheetJS (XLSX) for client-side Excel parsing and exports -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+    <!-- UI Custom Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-flipkart">
+
+    <!-- Header / Navbar -->
+    <header class="app-header header-flipkart">
+        <div class="header-container">
+            <div class="brand-group">
+                <div class="brand-logo logo-flipkart">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <path d="M16 10a4 4 0 0 1-8 0"></path>
+                    </svg>
+                </div>
+                <div class="brand-text">
+                    <h1 class="app-title">Amazon &amp; Flipkart Keyword Database</h1>
+                </div>
+            </div>
+
+            <!-- Marketplace Navigation Switcher -->
+            <div class="marketplace-nav">
+                <a href="index.html" class="mkt-nav-btn" id="btnNavHome" title="Home Page Marketplace Selection">
+                    <span class="mkt-icon">🏠</span> Home
+                </a>
+                <a href="amazon.html" class="mkt-nav-btn" id="btnNavAmazon" title="Amazon Workspace">
+                    <span class="mkt-icon">📦</span> Amazon
+                </a>
+                <a href="flipkart.html" class="mkt-nav-btn active" id="btnNavFlipkart" title="Flipkart Workspace">
+                    <span class="mkt-icon">🛍️</span> Flipkart
+                    <span class="badge badge-success mkt-count-badge" id="fkHeaderCountBadge">100 Done</span>
+                </a>
+            </div>
+
+            <div class="header-actions">
+                <div class="system-status" id="systemStatus">
+                    <span class="status-indicator"></span>
+                    <span class="status-text">MySQL Flipkart DB Connected (marketlens_flipkart)</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="main-container">
+
+        <!-- ========================================================================== -->
+        <!-- FLIPKART WORKSPACE SECTION -->
+        <!-- ========================================================================== -->
+        <div id="flipkartSectionView" style="display: flex; flex-direction: column; gap: 24px;">
+            
+            <!-- 1. NEW EXCEL UPLOAD SECTION FOR FLIPKART COLLECTION -->
+            <section class="card upload-card" id="fkUploadCardSection">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">Upload Product Spreadsheet for Flipkart Collection</h2>
+                        <p class="card-description">Upload an Excel spreadsheet (.xlsx, .xls) containing product FSNs or ASINs to trigger Flipkart autosuggest keyword collection.</p>
+                    </div>
+                    <span class="badge badge-info" style="background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe;">New Collection Upload</span>
+                </div>
+
+                <div class="upload-dropzone" id="fkDropzone">
+                    <input type="file" id="fkExcelFileInput" accept=".xlsx,.xls" hidden>
+                    <div class="dropzone-content" id="fkDropzoneContent">
+                        <div class="upload-icon-wrapper" style="background-color: #eff6ff; color: #2563eb; border-color: #bfdbfe;">
+                            <svg class="upload-icon" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                        </div>
+                        <div class="upload-instructions">
+                            <p class="upload-primary-text">Drag & drop your Flipkart Excel file here, or <span class="upload-browse-btn" style="color: #2563eb;" onclick="document.getElementById('fkExcelFileInput').click()">Choose Excel File</span></p>
+                            <p class="upload-secondary-text">Supported formats: .xlsx, .xls (Match products in marketlens_flipkart DB)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Validation & File Details Panel -->
+                <div class="file-details-panel hidden" id="fkFileDetailsPanel">
+                    <div class="file-info-bar">
+                        <div class="file-meta">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                            </svg>
+                            <span class="file-name" id="fkFileName">selected_file.xlsx</span>
+                            <span class="file-size-badge" id="fkFileSize">0 KB</span>
+                        </div>
+
+                        <div class="product-count-badge" id="fkProductCountBadge" style="background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe;">
+                            <span id="fkDetectedProductCount">0</span> Products Detected
+                        </div>
+                    </div>
+                </div>
+
+                <div class="upload-actions">
+                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('fkExcelFileInput').click()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        Choose Excel File
+                    </button>
+                    <button type="button" class="btn btn-primary btn-flipkart-blue" id="fkStartCollectionBtn" onclick="startFlipkartUploadCollection()" disabled>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                        </svg>
+                        Start Flipkart Keyword Collection
+                    </button>
+                </div>
+            </section>
+
+            <!-- 2. COLLECTION PROGRESS SECTION -->
+            <section class="card progress-card hidden" id="fkProgressCardSection">
+                <div class="progress-header">
+                    <div>
+                        <h3 class="progress-title">Flipkart Keyword Collection Progress</h3>
+                        <p class="progress-subtitle" id="fkProgressStatusText">Processing uploaded Flipkart products...</p>
+                    </div>
+                    <div class="progress-meta">
+                        <span class="badge badge-processing" id="fkProgressStatusBadge">Processing</span>
+                        <span class="progress-percentage-label" id="fkProgressPercentageText">0%</span>
+                    </div>
+                </div>
+
+                <div class="progress-bar-track">
+                    <div class="progress-bar-fill" id="fkProgressBarFill" style="width: 0%;"></div>
+                </div>
+            </section>
+
+            <!-- 3. CURRENT UPLOAD & COLLECTION SESSION RESULTS -->
+            <section class="card table-card" id="fkSessionResultsCard">
+                <div class="card-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 14px; margin-bottom: 16px;">
+                    <div>
+                        <h3 class="card-title">Current Collection Session Results</h3>
+                        <p class="card-description" id="fkSessionSubtext">No collection started in this session yet. Upload an Excel spreadsheet above and click "Start Flipkart Keyword Collection".</p>
+                    </div>
+                    <span class="badge badge-info" id="fkSessionBadge" style="background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe;">Current Session</span>
+                </div>
+
+                <!-- Empty State Container when no collection run in current session -->
+                <div id="fkSessionEmptyState" style="text-align: center; padding: 40px 24px; color: var(--text-muted);">
+                    <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 12px; opacity: 0.5; color: #2563eb;">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                    </svg>
+                    <h4 style="font-size: 15px; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">No Keywords Collected in Current Session Yet</h4>
+                    <p style="font-size: 13px;">Upload an Excel file above and click <strong>"Start Flipkart Keyword Collection"</strong> to run collection for uploaded products.</p>
+                </div>
+
+                <!-- Session Results Table (Hidden initially, renders newly collected items during current session) -->
+                <div class="table-container hidden" id="fkSessionTableContainer">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 60px;">#</th>
+                                <th style="width: 150px;">FSN / ASIN</th>
+                                <th>Product Name</th>
+                                <th style="width: 140px;">Category</th>
+                                <th style="width: 170px;">Status</th>
+                                <th style="width: 180px; text-align: center;">Collection Results</th>
+                                <th style="width: 150px; text-align: center;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fkSessionTableBody">
+                            <!-- Populated dynamically when collection runs in current session -->
+                        </tbody>
+                    </table>
+                    <div class="table-footer" style="padding-top: 12px; margin-top: 12px; border-top: 1px solid var(--border-color);">
+                        <div class="pagination-info" id="fkSessionPaginationInfo">
+                            Showing 0 of 0 current session products
+                        </div>
+                        <div class="pagination-controls">
+                            <label class="rows-per-page-label">Rows per page:
+                                <select id="fkSessionPageSizeSelect" onchange="changeFlipkartSessionPageSize(this.value)">
+                                    <option value="100" selected>100</option>
+                                    <option value="50">50</option>
+                                    <option value="25">25</option>
+                                    <option value="10">10</option>
+                                </select>
+                            </label>
+                            <div class="page-buttons" id="fkSessionPageButtons"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. FLIPKART DASHBOARD SUMMARY CARDS (EXISTING STORED DATABASE METRICS) -->
+            <section class="summary-cards-grid-5">
+                <!-- Total Products -->
+                <div class="card summary-card card-total">
+                    <div class="summary-card-body">
+                        <div class="summary-icon icon-total">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                            </svg>
+                        </div>
+                        <div class="summary-details">
+                            <span class="summary-label">Total Flipkart Products</span>
+                            <h3 class="summary-value" id="fkTotalProductsCount">2,153</h3>
+                        </div>
+                    </div>
+                    <div class="summary-card-footer">
+                        <span class="summary-subtext">Stored in marketlens_flipkart</span>
+                    </div>
+                </div>
+
+                <!-- Completed Flipkart Products -->
+                <div class="card summary-card card-completed">
+                    <div class="summary-card-body">
+                        <div class="summary-icon icon-completed">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                            </svg>
+                        </div>
+                        <div class="summary-details">
+                            <span class="summary-label">Completed Flipkart</span>
+                            <h3 class="summary-value" id="fkCompletedProductsCount">100</h3>
+                        </div>
+                    </div>
+                    <div class="summary-card-footer">
+                        <span class="summary-subtext text-success" id="fkCompletionRate">flipkart_status = completed</span>
+                    </div>
+                </div>
+
+                <!-- Pending Flipkart Products -->
+                <div class="card summary-card card-pending">
+                    <div class="summary-card-body">
+                        <div class="summary-icon icon-pending">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                        </div>
+                        <div class="summary-details">
+                            <span class="summary-label">Pending Flipkart</span>
+                            <h3 class="summary-value" id="fkPendingProductsCount">2,051</h3>
+                        </div>
+                    </div>
+                    <div class="summary-card-footer">
+                        <span class="summary-subtext text-muted">Ready for Batch Collection</span>
+                    </div>
+                </div>
+
+                <!-- Failed Flipkart Products -->
+                <div class="card summary-card card-failed">
+                    <div class="summary-card-body">
+                        <div class="summary-icon icon-failed">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="15" y1="9" x2="9" y2="15"></line>
+                                <line x1="9" y1="9" x2="15" y2="15"></line>
+                            </svg>
+                        </div>
+                        <div class="summary-details">
+                            <span class="summary-label">Failed Flipkart</span>
+                            <h3 class="summary-value" id="fkFailedProductsCount">0</h3>
+                        </div>
+                    </div>
+                    <div class="summary-card-footer">
+                        <span class="summary-subtext text-muted">0 Keywords Collected</span>
+                    </div>
+                </div>
+
+                <!-- Total Flipkart Keywords -->
+                <div class="card summary-card card-keywords">
+                    <div class="summary-card-body">
+                        <div class="summary-icon icon-keywords">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                                <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                            </svg>
+                        </div>
+                        <div class="summary-details">
+                            <span class="summary-label">Total Flipkart Keywords</span>
+                            <h3 class="summary-value" id="fkTotalKeywordsCount">1,868</h3>
+                        </div>
+                    </div>
+                    <div class="summary-card-footer">
+                        <span class="summary-subtext" id="fkAvgKeywordsText">marketlens_flipkart database</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 5. STORED FLIPKART DATABASE EXPLORER (EXISTING STORED RECORDS) -->
+            <section class="card table-card">
+                <div class="card-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 14px; margin-bottom: 16px;">
+                    <div>
+                        <h3 class="card-title">Stored Flipkart Database Records</h3>
+                        <p class="card-description">Browse existing Flipkart products and previously collected keywords stored in <code>marketlens_flipkart</code>.</p>
+                    </div>
+                    <span class="badge badge-success">Existing Database Data</span>
+                </div>
+
+                <div class="toolbar-header">
+                    <div class="search-filter-group">
+                        <div class="search-input-wrapper">
+                            <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg>
+                            <input type="text" id="fkSearchInput" class="search-input" placeholder="Search FSN/ASIN or Product Name..." oninput="filterFlipkartProducts()">
+                        </div>
+
+                        <div class="select-wrapper">
+                            <select id="fkStatusFilter" class="select-control" onchange="filterFlipkartProducts()">
+                                <option value="all">All Flipkart Statuses</option>
+                                <option value="completed">Completed</option>
+                                <option value="pending">Pending</option>
+                                <option value="failed">Failed</option>
+                                <option value="in_progress">In Progress</option>
+                            </select>
+                        </div>
+
+                        <div class="select-wrapper">
+                            <select id="fkCategoryFilter" class="select-control" onchange="filterFlipkartProducts()">
+                                <option value="all">All Categories</option>
+                            </select>
+                        </div>
+
+                        <div class="select-wrapper">
+                            <select id="fkSortControl" class="select-control" onchange="filterFlipkartProducts()">
+                                <option value="id_asc">Sort: Product ID (Ascending)</option>
+                                <option value="kw_desc">Keywords: High to Low</option>
+                                <option value="name_asc">Product Name (A-Z)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="table-export-actions">
+                        <button type="button" class="btn btn-outline" onclick="downloadFlipkartExport('csv')">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                            </svg>
+                            Download CSV
+                        </button>
+                        <button type="button" class="btn btn-primary btn-flipkart-blue" onclick="downloadFlipkartExport('excel')">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                            Download Excel
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 60px;">#</th>
+                                <th style="width: 150px;">FSN / ASIN</th>
+                                <th>Product Name</th>
+                                <th style="width: 140px;">Category</th>
+                                <th style="width: 140px;">Flipkart Status</th>
+                                <th style="width: 140px; text-align: center;">Keywords Count</th>
+                                <th style="width: 140px; text-align: center;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fkProductTableBody">
+                            <!-- Populated dynamically from marketlens_flipkart DB -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="table-footer">
+                    <div class="pagination-info" id="fkPaginationInfo">
+                        Showing 0 of 0 Flipkart products
+                    </div>
+                    <div class="pagination-controls">
+                        <label class="rows-per-page-label">Rows per page:
+                            <select id="fkPageSizeSelect" onchange="changeFlipkartPageSize(this.value)">
+                                <option value="100" selected>100</option>
+                                <option value="50">50</option>
+                                <option value="25">25</option>
+                            </select>
+                        </label>
+                        <div class="page-buttons" id="fkPageButtons"></div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+    </main>
+
+    <!-- Modal: View Collected Flipkart Keywords for Product -->
+    <div class="modal-backdrop hidden" id="flipkartModalBackdrop">
+        <div class="modal-content" role="dialog" aria-modal="true" style="max-width: 850px; width: 95%;">
+            <div class="modal-header">
+                <div>
+                    <div class="modal-subtitle-badge" id="fkModalAsinBadge">FSN: -</div>
+                    <h2 class="modal-title" id="fkModalProductName">Flipkart Keywords</h2>
+                </div>
+                <button type="button" class="modal-close-btn" onclick="closeFlipkartModal()">&times;</button>
+            </div>
+
+            <div class="modal-body">
+                <div class="modal-meta-bar">
+                    <div class="meta-item">
+                        <span class="meta-label">Category:</span>
+                        <span class="meta-value" id="fkModalCategory">General</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Flipkart Status:</span>
+                        <span class="meta-value badge badge-success" id="fkModalStatusBadge">completed</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Keywords Collected:</span>
+                        <span class="meta-value badge badge-info" id="fkModalKeywordCount">0 Keywords</span>
+                    </div>
+                </div>
+
+                <div class="modal-search-wrapper" style="margin-top: 12px;">
+                    <input type="text" id="fkModalSearchInput" class="search-input" placeholder="Search keywords in this product..." oninput="filterFlipkartModalKeywords()">
+                </div>
+
+                <div class="modal-table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">#</th>
+                                <th>Flipkart Keyword Phrase</th>
+                                <th style="width: 220px;">Source</th>
+                                <th style="width: 120px; text-align: right;">Relevance</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fkModalTableBody">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="copyFlipkartModalKeywords()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                    Copy Keywords
+                </button>
+                <button type="button" class="btn btn-primary btn-flipkart-blue" onclick="closeFlipkartModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Flipkart Dedicated Script File -->
+    <script src="flipkart.js"></script>
+</body>
+</html>

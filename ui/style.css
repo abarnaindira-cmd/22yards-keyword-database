@@ -1008,15 +1008,116 @@ body {
 .text-success { color: #059669; }
 .text-muted { color: var(--text-muted); }
 
+/* Marketplace Tab Navigation Header Styles */
+.marketplace-nav {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background-color: var(--bg-secondary);
+    padding: 5px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+}
+
+.mkt-nav-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 10px 24px;
+    height: 44px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #475569;
+    background: transparent;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+}
+
+.mkt-nav-btn:hover:not(.active) {
+    color: var(--text-main);
+    background-color: rgba(255, 255, 255, 0.7);
+}
+
+/* Amazon Active: Full Yellow Background Box */
+#btnNavAmazon.active {
+    background-color: #f59e0b;
+    background-image: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+    color: #0f172a;
+    font-weight: 700;
+    box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4);
+    border: 1px solid #d97706;
+}
+
+/* Flipkart Active: Full Blue Background Box */
+#btnNavFlipkart.active {
+    background-color: #2563eb;
+    background-image: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    color: #ffffff;
+    font-weight: 700;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+    border: 1px solid #1d4ed8;
+}
+
+.mkt-icon {
+    font-size: 18px;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* Inactive Badge vs Active Badge for Flipkart */
+.mkt-count-badge {
+    font-size: 12px;
+    padding: 3px 9px;
+    border-radius: 9999px;
+    font-weight: 700;
+    background-color: #e0f2fe;
+    color: #0369a1;
+    border: 1px solid #bae6fd;
+    transition: all 0.2s ease;
+}
+
+#btnNavFlipkart.active .mkt-count-badge {
+    background-color: #ffffff;
+    color: #1e40af;
+    border-color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* 5-Column Summary Cards Grid for Flipkart */
+.summary-cards-grid-5 {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+}
+
+.card-failed .icon-failed {
+    background-color: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+
 /* Responsive Adjustments */
+@media (max-width: 1200px) {
+    .summary-cards-grid-5 {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
 @media (max-width: 1024px) {
     .summary-cards-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .summary-cards-grid-5 {
         grid-template-columns: repeat(2, 1fr);
     }
 }
 
 @media (max-width: 640px) {
-    .summary-cards-grid {
+    .summary-cards-grid, .summary-cards-grid-5 {
         grid-template-columns: 1fr;
     }
     .toolbar-header {
@@ -1037,5 +1138,228 @@ body {
     .main-container {
         padding: 0 12px;
     }
+}
+
+/* Home Nav Button Active */
+#btnNavHome.active {
+    background-color: var(--text-main);
+    color: #ffffff;
+    font-weight: 700;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.3);
+    border: 1px solid var(--text-main);
+}
+
+/* ==========================================================================
+   FIRST PAGE MARKETPLACE SELECTION LANDING STYLES
+   ========================================================================== */
+.landing-hero-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px 48px;
+    gap: 32px;
+}
+
+.landing-header {
+    text-align: center;
+    max-width: 680px;
+}
+
+.landing-title {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--text-main);
+    letter-spacing: -0.02em;
+}
+
+.landing-subtitle {
+    font-size: 15px;
+    color: var(--text-muted);
+    margin-top: 8px;
+}
+
+.marketplace-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 28px;
+    width: 100%;
+    max-width: 960px;
+}
+
+.mkt-card {
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 20px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    position: relative;
+    overflow: hidden;
+}
+
+.mkt-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
+}
+
+.mkt-card-amazon {
+    border-top: 4px solid #f59e0b;
+}
+
+.mkt-card-amazon:hover {
+    border-color: #d97706;
+}
+
+.mkt-card-flipkart {
+    border-top: 4px solid #2563eb;
+}
+
+.mkt-card-flipkart:hover {
+    border-color: #1d4ed8;
+}
+
+.mkt-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.mkt-card-icon-box {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+}
+
+.icon-amazon {
+    background-color: #fef3c7;
+    border: 1px solid #fde68a;
+}
+
+.icon-flipkart {
+    background-color: #eff6ff;
+    border: 1px solid #bfdbfe;
+}
+
+.mkt-db-tag {
+    font-size: 12px;
+    font-family: monospace;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 9999px;
+}
+
+.db-tag-amazon {
+    background-color: #fffbeb;
+    color: #b45309;
+    border: 1px solid #fde68a;
+}
+
+.db-tag-flipkart {
+    background-color: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+}
+
+.mkt-card-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 8px;
+}
+
+.mkt-card-desc {
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-bottom: 16px;
+}
+
+.mkt-card-stats {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-muted);
+    background-color: var(--bg-app);
+    padding: 8px 14px;
+    border-radius: 8px;
+    width: fit-content;
+}
+
+.mkt-stat-divider {
+    color: var(--text-subtle);
+}
+
+.btn-mkt-action {
+    width: 100%;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-mkt-amazon {
+    background-color: #f59e0b;
+    background-image: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.btn-mkt-amazon:hover {
+    box-shadow: 0 6px 16px rgba(245, 158, 11, 0.45);
+    transform: translateY(-1px);
+}
+
+.btn-mkt-flipkart {
+    background-color: #2563eb;
+    background-image: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.btn-mkt-flipkart:hover {
+    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.45);
+    transform: translateY(-1px);
+}
+
+/* Flipkart Blue Theme Elements */
+.theme-flipkart .app-header {
+    border-bottom: 2px solid #bfdbfe;
+    background-color: #ffffff;
+}
+
+.theme-flipkart .logo-flipkart {
+    background-color: #eff6ff;
+    color: #2563eb;
+    border-color: #bfdbfe;
+}
+
+.theme-flipkart .btn-flipkart-blue {
+    background-color: #2563eb;
+    background-image: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    color: #ffffff;
+    border: none;
+}
+
+.theme-flipkart .btn-flipkart-blue:hover {
+    background-color: #1d4ed8;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
 }
 

@@ -1,3 +1,4 @@
+import os
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
@@ -29,6 +30,52 @@ def collect_keywords_from_products(
             detail=f"Keyword collection failed: {str(e)}"
         )
 
+@router.post("/collect-amazon-urls", summary="Collect & Permanently Store Organic Amazon URLs for Harvested Keywords")
+def collect_amazon_urls(
+    asin: str = Query(..., description="Target Product ASIN to process"),
+    db: Session = Depends(get_db)
+):
+    """
+    Search each harvested keyword belonging to ASIN on Amazon India,
+    collect top 5 organic product URLs, and permanently store in MySQL table 'keyword_search_urls'.
+    """
+    try:
+        from app.services.amazon_url_collector import process_amazon_urls_for_asin
+        return process_amazon_urls_for_asin(db=db, target_asin=asin)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Amazon URL collection failed: {str(e)}"
+        )
+
+@router.get("/export-harvested-keywords", summary="Export Harvested Keywords Report with Stored Amazon URLs to Excel or CSV")
+def export_harvested_keywords(
+    asin: Optional[str] = Query(None, description="Optional Product ASIN filter"),
+    format: str = Query("excel", description="Export format: 'excel' or 'csv'"),
+    db: Session = Depends(get_db)
+):
+    """
+    Read harvested keywords and stored Amazon URLs from MySQL, format into sheet/file 'Harvested Keywords'
+    with columns A-J (F-J containing stored Amazon URLs), and return Excel or CSV file. Performs NO live searches.
+    """
+    from fastapi.responses import FileResponse
+    from app.services.excel_exporter import export_harvested_keywords_to_excel
+    try:
+        fmt = "csv" if format.lower() == "csv" else "excel"
+        filepath = export_harvested_keywords_to_excel(db=db, source_product_asin=asin, file_format=fmt)
+        filename = os.path.basename(filepath)
+        media_type = "text/csv" if fmt == "csv" else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        return FileResponse(
+            path=filepath,
+            filename=filename,
+            media_type=media_type
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Export failed: {str(e)}"
+        )
+
 @router.get("/test-db", summary="Test Database Connection")
 def check_db_connection():
     """Verify MySQL/Database connection and parameters."""
@@ -57,7 +104,37 @@ def list_keywords(
     if category:
         query = query.filter(Keyword.category == category)
     
-    return query.offset(skip).limit(limit).all()
+    keywords = query.offset(skip).limit(limit).all()
+    if not keywords:
+        return []
+
+    from app.models.keyword_url import KeywordSearchUrl
+    asins = list({k.source_product_asin for k in keywords if k.source_product_asin})
+    url_rows = db.query(KeywordSearchUrl).filter(
+        KeywordSearchUrl.source_product_asin.in_(asins),
+        KeywordSearchUrl.marketplace == "amazon"
+    ).all() if asins else []
+    url_map = {(u.source_product_asin.strip().lower(), u.keyword.strip().lower()): u for u in url_rows}
+
+    res = []
+    for k in keywords:
+        u = url_map.get((k.source_product_asin.strip().lower() if k.source_product_asin else "", k.keyword.strip().lower()))
+        res.append({
+            "id": k.id,
+            "keyword": k.keyword,
+            "source": k.source,
+            "source_product_asin": k.source_product_asin,
+            "category": k.category,
+            "relevance_score": k.relevance_score,
+            "url_1": u.url_1 if u and u.url_1 else None,
+            "url_2": u.url_2 if u and u.url_2 else None,
+            "url_3": u.url_3 if u and u.url_3 else None,
+            "url_4": u.url_4 if u and u.url_4 else None,
+            "url_5": u.url_5 if u and u.url_5 else None,
+            "created_at": k.created_at,
+            "updated_at": k.updated_at,
+        })
+    return res
 
 @router.post("", response_model=KeywordResponse, status_code=status.HTTP_201_CREATED, summary="Create Keyword")
 def create_keyword(

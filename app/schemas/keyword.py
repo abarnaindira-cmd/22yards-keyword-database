@@ -21,6 +21,11 @@ class KeywordUpdate(BaseModel):
 
 class KeywordResponse(KeywordBase):
     id: int
+    url_1: Optional[str] = None
+    url_2: Optional[str] = None
+    url_3: Optional[str] = None
+    url_4: Optional[str] = None
+    url_5: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

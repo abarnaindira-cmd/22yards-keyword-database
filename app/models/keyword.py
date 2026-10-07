@@ -14,12 +14,13 @@ class Keyword(Base):
     source_product_asin = Column(String(50), nullable=False, index=True)
     category = Column(String(100), nullable=True)
     relevance_score = Column(Float, nullable=True, default=0.0)
+    marketplace = Column(String(50), nullable=False, default="amazon", index=True)
     created_at = Column(DateTime, default=utc_now, nullable=False)
     updated_at = Column(DateTime, default=utc_now, onupdate=utc_now, nullable=False)
 
     __table_args__ = (
-        UniqueConstraint('keyword', 'source_product_asin', 'source', name='uix_keyword_asin_source'),
+        UniqueConstraint('keyword', 'source_product_asin', 'source', 'marketplace', name='uix_keyword_asin_source_mkt'),
     )
 
     def __repr__(self):
-        return f"<Keyword(id={self.id}, keyword='{self.keyword}', asin='{self.source_product_asin}', source='{self.source}')>"
+        return f"<Keyword(id={self.id}, keyword='{self.keyword}', asin='{self.source_product_asin}', source='{self.source}', marketplace='{self.marketplace}')>"

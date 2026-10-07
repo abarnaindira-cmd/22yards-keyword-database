@@ -1,0 +1,122 @@
+import os
+import time
+import sys
+import openpyxl
+sys.stdout.reconfigure(encoding='utf-8')
+
+from sqlalchemy import text
+from app.database import SessionLocal
+from app.models.product import Product
+from app.models.competitor import CompetitorProduct
+from app.services.title_generator import process_final_product_data_for_asin, fallback_generate_title
+from app.services.excel_exporter import export_final_product_data_to_excel, set_current_batch_asins
+
+def run_pilot():
+    db = SessionLocal()
+
+    print("==========================================================================")
+    print("CONTROLLED 100-PRODUCT PILOT FOR COMPETITOR-BASED GROQ TITLE GENERATOR")
+    print("==========================================================================")
+
+    # Step 1: Select 100 pilot products with competitor titles
+    # Mix: 70 products with >= 20 titles, 30 products with 1-19 titles
+    comp_sql = """
+    SELECT source_product_asin, COUNT(DISTINCT competitor_title) AS comp_count
+    FROM competitor_products
+    WHERE competitor_title IS NOT NULL AND TRIM(competitor_title) != ''
+    GROUP BY source_product_asin;
+    """
+    comp_counts = db.execute(text(comp_sql)).fetchall()
+    asin_to_comp = {row[0]: row[1] for row in comp_counts}
+
+    all_prods = db.query(Product).order_by(Product.id.asc()).all()
+
+    prods_20_plus = [p for p in all_prods if asin_to_comp.get(p.asin, 0) >= 20]
+    prods_1_to_19 = [p for p in all_prods if 1 <= asin_to_comp.get(p.asin, 0) < 20]
+
+    selected_20_plus = prods_20_plus[:70]
+    selected_1_to_19 = prods_1_to_19[:30]
+
+    pilot_prods = selected_20_plus + selected_1_to_19
+    pilot_asins = [p.asin for p in pilot_prods]
+
+    print(f"\n1. PILOT SELECTION SUMMARY:")
+    print(f"   - Total Pilot Products               : {len(pilot_prods)}")
+    print(f"   - Products with >= 20 Competitor Titles: {len(selected_20_plus)}")
+    print(f"   - Products with 1-19 Competitor Titles : {len(selected_1_to_19)}")
+    print(f"   - Sample Pilot ASINs                 : {pilot_asins[:5]}")
+
+    # Step 2: Execute Title Generation for the 100 Pilot Products
+    print("\n2. EXECUTING TITLE GENERATION FOR 100 PILOT PRODUCTS...")
+
+    groq_success_count = 0
+    fallback_count = 0
+    failed_count = 0
+    results = []
+
+    for idx, p in enumerate(pilot_prods, 1):
+        comp_c = asin_to_comp.get(p.asin, 0)
+        res = process_final_product_data_for_asin(db, p.asin)
+
+        if "error" in res:
+            failed_count += 1
+            print(f"[{idx}/100] ASIN: {p.asin} (Comps: {comp_c}) -> FAILED: {res.get('error')}")
+        else:
+            method = res.get("generation_method")
+            if method == "groq":
+                groq_success_count += 1
+            else:
+                fallback_count += 1
+
+            title = res.get("final_product_title")
+            print(f"[{idx}/100] ASIN: {p.asin} (Comps: {comp_c}) -> Method: {method.upper()} | Title: {title[:75]}...")
+            results.append(res)
+
+        time.sleep(1.0)
+
+    # Step 3: Update current-batch tracking for export
+    set_current_batch_asins(pilot_asins)
+
+    # Step 4: Export & Verify Excel Export File for Pilot Products
+    print("\n3. EXPORTING & VERIFYING PILOT EXCEL FILE...")
+    export_path = os.path.join("scratch", "Final_Product_Data_Pilot_100.xlsx")
+    saved_filepath = export_final_product_data_to_excel(db, asins_list=pilot_asins, output_filepath=export_path)
+
+    wb = openpyxl.load_workbook(saved_filepath)
+    sheet = wb.active
+    total_excel_rows = sheet.max_row
+    total_excel_cols = sheet.max_column
+    headers = [sheet.cell(row=1, column=c).value for c in range(1, total_excel_cols + 1)]
+
+    row_2_data = [sheet.cell(row=2, column=c).value for c in range(1, 5)]
+
+    print(f"   - Export File Path     : {saved_filepath}")
+    print(f"   - Total File Size      : {os.path.getsize(saved_filepath)} bytes")
+    print(f"   - Total Worksheet Rows : {total_excel_rows} (Header + {total_excel_rows - 1} Products)")
+    print(f"   - Total Columns        : {total_excel_cols}")
+    print(f"   - Headers              : {headers}")
+
+    # Assertions for pilot verification
+    assert headers == ["product_name", "sku_id", "final_product_title", "all_keywords"], f"Mismatch headers: {headers}"
+    assert total_excel_rows == 101, f"Expected 101 rows, got {total_excel_rows}"
+
+    print(f"\n4. SAMPLE PILOT RECORD IN EXCEL (Row 2):")
+    print(f"   - product_name       : {row_2_data[0]}")
+    print(f"   - sku_id             : {row_2_data[1]}")
+    print(f"   - final_product_title: {row_2_data[2]}")
+    print(f"   - all_keywords       : {str(row_2_data[3])[:100]}...")
+
+    print("\n==========================================================================")
+    print("100-PRODUCT PILOT RUN COMPLETE AND VERIFIED!")
+    print("==========================================================================")
+    print(f"  - Total Pilot Products Selected       : {len(pilot_asins)}")
+    print(f"  - Successfully Generated by Groq AI    : {groq_success_count}")
+    print(f"  - Fallback-Generated Titles            : {fallback_count}")
+    print(f"  - Failed Titles                        : {failed_count}")
+    print(f"  - Database Records Updated in MySQL    : {len(results)}/100")
+    print("==========================================================================")
+
+    db.close()
+
+if __name__ == "__main__":
+    run_pilot()

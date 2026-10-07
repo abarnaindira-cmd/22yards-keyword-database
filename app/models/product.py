@@ -13,8 +13,10 @@ class Product(Base):
     product_name = Column(String(500), nullable=False, index=True)
     category = Column(String(100), nullable=True, index=True)
     status = Column(String(50), nullable=False, default="pending", index=True)  # pending, in_progress, completed
+    flipkart_status = Column(String(50), nullable=False, default="pending", index=True)  # pending, in_progress, completed, failed
+    marketplace = Column(String(50), nullable=False, default="amazon", index=True)
     created_at = Column(DateTime, default=utc_now, nullable=False)
     updated_at = Column(DateTime, default=utc_now, onupdate=utc_now, nullable=False)
 
     def __repr__(self):
-        return f"<Product(id={self.id}, asin='{self.asin}', name='{self.product_name}', status='{self.status}')>"
+        return f"<Product(id={self.id}, asin='{self.asin}', name='{self.product_name}', status='{self.status}', flipkart_status='{self.flipkart_status}', marketplace='{self.marketplace}')>"

@@ -13,3 +13,11 @@ ENV/
 logs/
 
 *.xlsx
+
+# generated outputs and backups
+scratch/audit_step0_*/
+scratch/fast_titles_*/
+scratch/final_titles_backup_*.json
+scratch/preflight_rollback_snapshot.json
+title_run_*.csv
+*.csv

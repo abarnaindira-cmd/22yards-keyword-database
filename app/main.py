@@ -3,10 +3,11 @@ from datetime import datetime, timezone
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.database import init_db, test_db_connection
+from app.database import init_db, test_db_connection, test_flipkart_db_connection
 from app.routers.keywords import router as keywords_router
 from app.routers.products import router as products_router
 from app.routers.competitors import router as competitors_router
+from app.routers.flipkart import router as flipkart_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -17,7 +18,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Amazon Keyword Analysis API",
-    description="Phase 1: Foundation and MySQL Database Setup",
+    description="Phase 1: Foundation and MySQL Database Setup - Strict Batch Validation & Persistent Tracking",
     version="1.0.0",
     lifespan=lifespan
 )
@@ -35,13 +36,16 @@ app.add_middleware(
 app.include_router(keywords_router)
 app.include_router(products_router)
 app.include_router(competitors_router)
+app.include_router(flipkart_router)
 
 @app.get("/health", tags=["Health"])
 def health_check():
     """Simple health-check endpoint returning system and DB status."""
-    db_info = test_db_connection()
+    amazon_db = test_db_connection()
+    flipkart_db = test_flipkart_db_connection()
     return {
         "status": "ok",
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "database": db_info
+        "amazon_database": amazon_db,
+        "flipkart_database": flipkart_db
     }

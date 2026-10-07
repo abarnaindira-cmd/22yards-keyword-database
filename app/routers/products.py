@@ -62,16 +62,29 @@ async def match_products_excel(
             prod = db.query(Product).filter(Product.product_name == prod_name).first()
 
         if prod:
+            from app.models.keyword_url import KeywordSearchUrl
+
             kw_rows = db.query(Keyword).filter(Keyword.source_product_asin == prod.asin).all()
-            keywords = [
-                {
+            url_rows = db.query(KeywordSearchUrl).filter(
+                KeywordSearchUrl.source_product_asin == prod.asin,
+                KeywordSearchUrl.marketplace == "amazon"
+            ).all()
+            url_map = {u.keyword.strip().lower(): u for u in url_rows}
+
+            keywords = []
+            for k in kw_rows:
+                u = url_map.get(k.keyword.strip().lower())
+                keywords.append({
                     "id": k.id,
                     "keyword": k.keyword,
                     "source": k.source,
                     "relevance_score": k.relevance_score,
-                }
-                for k in kw_rows
-            ]
+                    "url_1": u.url_1 if u and u.url_1 else None,
+                    "url_2": u.url_2 if u and u.url_2 else None,
+                    "url_3": u.url_3 if u and u.url_3 else None,
+                    "url_4": u.url_4 if u and u.url_4 else None,
+                    "url_5": u.url_5 if u and u.url_5 else None,
+                })
 
             cp_rows = (
                 db.query(CompetitorProduct)
@@ -149,6 +162,11 @@ async def match_products_excel(
                 "category": item.get("category"),
                 "matched": False
             })
+
+    from app.services.excel_exporter import set_current_batch_asins
+    batch_asins = [p.get("asin") for p in parsed_products if p.get("asin")]
+    if batch_asins:
+        set_current_batch_asins(batch_asins)
 
     return {
         "filename": file.filename,
@@ -248,6 +266,105 @@ def list_products(
 
     return query.order_by(Product.id.asc()).offset(skip).limit(limit).all()
 
+@router.post("/generate-final-data", summary="Generate Final Product Data and Titles")
+def generate_final_data(
+    sku_id: Optional[str] = Query(None, description="Optional specific product SKU ID (ASIN) to process"),
+    limit: Optional[int] = Query(None, description="Max number of products to process"),
+    db: Session = Depends(get_db)
+):
+    """
+    Generate final product title using Groq LLM (or fallback), combine keywords into JSON,
+    and upsert records into MySQL 'final_product_data' table.
+    """
+    from app.services.title_generator import process_final_product_data_for_asin, process_all_final_product_data
+    try:
+        if sku_id:
+            res = process_final_product_data_for_asin(db=db, sku_id=sku_id)
+            if "error" in res:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=res["error"])
+            return res
+        else:
+            return process_all_final_product_data(db=db, limit=limit)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Final product data generation failed: {str(e)}"
+        )
+
+class FinalDataExportPayload(BaseModel if 'BaseModel' in globals() else object):
+    pass
+
+@router.get("/export-final-product-data", summary="Export Final Product Data Report to Excel")
+def export_final_product_data(
+    sku_id: Optional[str] = Query(None, description="Optional SKU ID (ASIN) filter"),
+    asins: Optional[str] = Query(None, description="Optional comma-separated list of ASINs/SKUs to export"),
+    skip: Optional[int] = Query(None, ge=0, description="Optional pagination offset for batch selection"),
+    limit: Optional[int] = Query(None, ge=1, le=500, description="Optional pagination limit for batch selection"),
+    batch_index: Optional[int] = Query(None, ge=1, description="Optional 1-based batch index (1 = Products 1-100, 2 = Products 101-200)"),
+    db: Session = Depends(get_db)
+):
+    """
+    Export 'final_product_data' table records into a single worksheet Excel file (.xlsx)
+    with columns: product_name, sku_id, final_product_title, all_keywords.
+    Exports strictly the selected/uploaded batch (or specified ASINs/SKU/batch index) and validates SKU equality.
+    """
+    import os
+    from fastapi.responses import FileResponse
+    from app.services.excel_exporter import export_final_product_data_to_excel, set_current_batch_asins
+
+    try:
+        asins_list = None
+        if sku_id:
+            asins_list = None
+        elif asins:
+            asins_list = [a.strip() for a in asins.split(",") if a.strip()]
+        elif batch_index is not None:
+            offset = (batch_index - 1) * 100
+            prods = db.query(Product).order_by(Product.id.asc()).offset(offset).limit(100).all()
+            asins_list = [p.asin for p in prods if p.asin]
+        elif skip is not None and limit is not None:
+            prods = db.query(Product).order_by(Product.id.asc()).offset(skip).limit(limit).all()
+            asins_list = [p.asin for p in prods if p.asin]
+
+        if asins_list:
+            set_current_batch_asins(asins_list)
+
+        filepath = export_final_product_data_to_excel(db=db, sku_id=sku_id, asins_list=asins_list)
+        filename = os.path.basename(filepath)
+        return FileResponse(
+            path=filepath,
+            filename=filename,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+    except ValueError as ve:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(ve)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Export failed: {str(e)}"
+        )
+
+@router.get("/final-data", summary="Get Final Product Data Records")
+def get_final_product_data_list(
+    sku_id: Optional[str] = Query(None, description="Filter by SKU ID (ASIN)"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
+    db: Session = Depends(get_db)
+):
+    """
+    Retrieve stored records from MySQL table 'final_product_data'.
+    """
+    from app.models.final_product_data import FinalProductData
+    query = db.query(FinalProductData)
+    if sku_id:
+        query = query.filter(FinalProductData.sku_id == sku_id)
+    return query.order_by(FinalProductData.sku_id.asc()).offset(skip).limit(limit).all()
+
 @router.get("/{product_id}", response_model=ProductResponse, summary="Get Product by ID")
 def get_product(
     product_id: int,
@@ -277,3 +394,5 @@ def delete_product(
     db.delete(prod)
     db.commit()
     return None
+
+
